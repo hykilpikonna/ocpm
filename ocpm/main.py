@@ -180,7 +180,7 @@ def run():
     # Download prompt
     print()
     print(f'Total download size: {sizeof_fmt(sum(l.artifact.size for k, l in updates))}')
-    proceed = input(f'🚀 Ready to fly? [y/N] ')
+    proceed = 'y' if args.y else input(f'🚀 Ready to fly? [y/N] ')
 
     if proceed.lower().strip() != 'y':
         print()
