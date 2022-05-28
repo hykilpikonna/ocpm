@@ -140,13 +140,18 @@ def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
 
 
 def run():
-    parser = argparse.ArgumentParser(description='OpenCore Kext Updater by HyDEV')
+    parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
     parser.add_argument('efi_path', help='EFI Directory Path')
+    parser.add_argument('cmd', help='Command (update)')
     parser.add_argument('--pre', action='store_true', help='Use pre-release')
     parser.add_argument('-y', action='store_true', help='Say yes')
 
-    printc('\n&fOpenCore Kext Updater v1.0.0 by HyDEV\n')
+    printc('\n&fOpenCore Package Manager v1.0.0 by HyDEV\n')
     args = parser.parse_args()
+
+    if args.cmd.lower() != 'update':
+        print(f'Unknown Command: {args.cmd}')
+        return
 
     # Normalize EFI Path
     efi = Path(args.efi_path)
@@ -164,7 +169,7 @@ def run():
     # print_kexts(kexts)
 
     # Read Repo
-    with open(Path(__file__).parent / 'OCKextRepos.yml') as f:
+    with open(Path(__file__).parent / 'data' / 'OCKextRepos.yml') as f:
         repos = ruamel.yaml.safe_load(f)
 
     # Get latest repos with multithreading
@@ -179,6 +184,10 @@ def run():
     # Compare versions
     updates: list[tuple[Kext, Release]]
     updates = [(k, l) for k, l in zip(kexts, latests) if l and version.parse(l.tag) > version.parse(k.version)]
+
+    if len(updates) == 0:
+        print(f'✨ Everything up-to-date!')
+        exit(0)
 
     # Print updates
     printc(f'\n✨ Found {len(updates)} Updates:')

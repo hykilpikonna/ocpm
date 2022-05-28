@@ -30,7 +30,7 @@ setup(
         "Programming Language :: Python :: 3.10",
     ],
     packages=['ocpm'],
-    package_data={'ocpm': ['ocpm/*']},
+    package_data={'ocpm': ['ocpm/data/*']},
     include_package_data=True,
     install_requires=['setuptools', 'hypy_utils', 'ruamel.yaml', 'requests', 'tqdm',
                       'packaging'],
