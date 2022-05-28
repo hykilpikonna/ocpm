@@ -32,7 +32,8 @@ setup(
     packages=['ocpm'],
     package_data={'ocpm': ['ocpm/*']},
     include_package_data=True,
-    install_requires=['setuptools', 'hypy_utils'],
+    install_requires=['setuptools', 'hypy_utils', 'ruamel.yaml', 'requests', 'tqdm',
+                      'packaging'],
     entry_points={
         "console_scripts": [
             "ocpm=ocpm.main:run",

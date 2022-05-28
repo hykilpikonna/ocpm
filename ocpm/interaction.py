@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from hypy_utils import printc
 
-from main import Kext, Release
+from .models import Kext, Release
 
 
 def ver_diff(src: str, to: str):

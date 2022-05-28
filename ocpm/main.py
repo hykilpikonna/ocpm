@@ -3,101 +3,18 @@ from __future__ import annotations
 
 import argparse
 import os
-import plistlib
-from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
-from packaging import version
+from tempfile import TemporaryDirectory
 
-import dateutil.parser
-import pandas
 import requests
-import tqdm as tqdm
 import ruamel.yaml
-import semver
+import tqdm as tqdm
 from hypy_utils import printc
-from pandas import DataFrame
+from packaging import version
 from tqdm.contrib.concurrent import thread_map
 
-from interaction import print_updates, sizeof_fmt
-
-
-@dataclass()
-class Kext:
-    path: Path
-
-    name: str
-    id: str
-    version: str
-    sdk_os: str
-    min_os: str
-
-    def __init__(self, path: Path):
-        self.path = path
-
-        # Find plist file
-        plist = path / 'Contents' / 'Info.plist'
-        if not plist.is_file():
-            print(f'Error loading {path.name}: Cannot find Info.plist')
-
-        # Load plist file
-        plist = plistlib.loads(plist.read_bytes())
-
-        self.name = plist['CFBundleName']
-        self.id = plist['CFBundleIdentifier']
-        self.version = plist['CFBundleVersion']
-        self.sdk_os = plist.get('DTSDKName')
-        self.min_os = plist.get('LSMinimumSystemVersion')
-
-        if self.sdk_os:
-            self.sdk_os = self.sdk_os.replace('macosx', '')
-
-
-def print_kexts(kexts: list[Kext]):
-    df = DataFrame(kexts)
-    df = df.drop(columns=['path', 'id'])
-    # df['path'] = df['path'].apply(lambda x: x.name.replace('.kext', ''))
-    print(df.to_string())
-
-
-@dataclass()
-class Artifact:
-    size: int
-    url: str
-    name: str
-
-    @classmethod
-    def from_github(cls, obj: dict) -> "Artifact":
-        return cls(obj['size'], obj['browser_download_url'], obj['name'])
-
-
-def find_artifact(raw: dict) -> Artifact:
-    assets = raw['assets']
-    if len(assets) == 1:
-        return Artifact.from_github(assets[0])
-
-    # Filter out DEBUG artifacts
-    assets = [a for a in assets if not a['name'].endswith('DEBUG.zip')]
-    return Artifact.from_github(assets[0])
-
-
-@dataclass()
-class Release:
-    tag: str
-    raw: dict
-    artifact: Artifact
-    date: datetime
-
-    @classmethod
-    def from_github(cls, raw: dict) -> "Release":
-        tag = raw['tag_name']
-        if tag.startswith('v'):
-            tag = tag[1:]
-
-        date = dateutil.parser.parse(raw['published_at'])
-        artifact = find_artifact(raw)
-
-        return cls(tag, raw, artifact, date)
+from .interaction import print_updates, sizeof_fmt
+from .models import Kext, Release
 
 
 def get_latest_release(kext: Kext, repos: dict, pre: bool):
@@ -128,6 +45,34 @@ def get_latest_release(kext: Kext, repos: dict, pre: bool):
     latest = releases[0]
 
     return Release.from_github(latest)
+
+
+def download_file(url: str, file: str | Path):
+    """
+    Helper method handling downloading large files from `url` to `filename`.
+    Returns a pointer to `filename`.
+
+    https://stackoverflow.com/a/42071418/7346633
+    """
+    chunk_size = 1024
+    r = requests.get(url, stream=True)
+    with open(file, 'wb') as f:
+        pbar = tqdm.tqdm(unit="B", total=int(r.headers['Content-Length']))
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            if chunk:
+                pbar.update(len(chunk))
+                f.write(chunk)
+    return file
+
+
+def download_updates(updates: list[tuple[Kext, Release]]):
+    # Create temporary directory
+    with TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+
+        print('Downloading zip files...')
+        for k, r in updates:
+            download_file(r.artifact.url, r.artifact.name)
 
 
 def run():
@@ -186,6 +131,8 @@ def run():
         print()
         print('😕 Huh, okay')
         exit(0)
+
+    download_updates(updates)
 
 
 if __name__ == '__main__':
