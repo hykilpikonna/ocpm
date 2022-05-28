@@ -141,8 +141,8 @@ def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
 
 def run():
     parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
-    parser.add_argument('efi_path', help='EFI Directory Path')
     parser.add_argument('cmd', help='Command (update)')
+    parser.add_argument('--efi', help='EFI Directory Path', default='.')
     parser.add_argument('--pre', action='store_true', help='Use pre-release')
     parser.add_argument('-y', action='store_true', help='Say yes')
 
@@ -154,7 +154,7 @@ def run():
         return
 
     # Normalize EFI Path
-    efi = Path(args.efi_path)
+    efi = Path(args.efi)
     if (efi / 'EFI').is_dir():
         efi = efi / 'EFI'
     assert (efi / 'OC').is_dir(), 'Open Core directory (OC) not found.'
