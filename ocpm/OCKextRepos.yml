@@ -1,0 +1,14 @@
+Repos:
+  Lilu: https://github.com/acidanthera/Lilu
+  AppleALC: https://github.com/acidanthera/AppleALC
+  IntelBluetoothFirmware: https://github.com/OpenIntelWireless/IntelBluetoothFirmware
+  BlueToolFixup: https://github.com/acidanthera/BrcmPatchRAM
+  VirtualSMC: &smc https://github.com/acidanthera/VirtualSMC
+  SMCSuperIO: *smc
+  SMCProcessor: *smc
+  NVMeFix: https://github.com/acidanthera/NVMeFix
+  WhateverGreen: https://github.com/acidanthera/WhateverGreen
+  RealtekRTL8111: https://github.com/Mieze/RTL8111_driver_for_OS_X
+  AirportItlwm: https://github.com/OpenIntelWireless/itlwm
+
+

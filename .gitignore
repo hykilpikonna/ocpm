@@ -115,4 +115,4 @@ dmypy.json
 
 # Custom
 .idea
-.iml
+*.iml
