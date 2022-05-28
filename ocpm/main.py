@@ -17,6 +17,13 @@ from .interaction import print_updates, sizeof_fmt
 from .models import Kext, Release
 
 
+try:
+    term_len = os.get_terminal_size().columns
+    bar_len = int(term_len * 0.4)
+except Exception:
+    bar_len = 20
+
+
 def get_latest_release(kext: Kext, repos: dict, pre: bool):
     # Lowercase keys
     repos = {k.lower(): v for k, v in repos['Repos'].items()}
@@ -39,7 +46,7 @@ def get_latest_release(kext: Kext, repos: dict, pre: bool):
     headers = {}
     if 'GH_TOKEN' in os.environ:
         headers['Authorization'] = f'token {os.environ["GH_TOKEN"]}'
-    releases = requests.get(f'https://api.github.com/repos/{repo}/releases').json()
+    releases = requests.get(f'https://api.github.com/repos/{repo}/releases', headers=headers).json()
     if not pre:
         releases = [r for r in releases if not r['prerelease']]
     latest = releases[0]
@@ -54,13 +61,16 @@ def download_file(url: str, file: str | Path):
 
     https://stackoverflow.com/a/42071418/7346633
     """
+    file = Path(file)
+
     chunk_size = 1024
     r = requests.get(url, stream=True)
     with open(file, 'wb') as f:
-        pbar = tqdm.tqdm(unit="B", total=int(r.headers['Content-Length']))
+        pbar = tqdm.tqdm(unit=" MB", total=int(r.headers['Content-Length']) / 1024 / 1024,
+                         bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', desc=file.name[:bar_len].ljust(bar_len))
         for chunk in r.iter_content(chunk_size=chunk_size):
             if chunk:
-                pbar.update(len(chunk))
+                pbar.update(len(chunk) / 1024 / 1024)
                 f.write(chunk)
     return file
 
@@ -71,8 +81,11 @@ def download_updates(updates: list[tuple[Kext, Release]]):
         tmp = Path(tmp)
 
         print('Downloading zip files...')
-        for k, r in updates:
-            download_file(r.artifact.url, r.artifact.name)
+        files = [download_file(r.artifact.url, tmp / r.artifact.name) for k, r in updates]
+
+        print()
+        print('Extracting kexts')
+
 
 
 def run():
@@ -110,8 +123,6 @@ def run():
         except AssertionError:
             return None
 
-    term_len = os.get_terminal_size().columns
-    bar_len = int(term_len * 0.4)
     latests = thread_map(get_latest, kexts, desc='Fetching Updates'.ljust(bar_len), max_workers=32, bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
 
     # Compare versions
@@ -132,6 +143,7 @@ def run():
         print('😕 Huh, okay')
         exit(0)
 
+    print()
     download_updates(updates)
 
 
