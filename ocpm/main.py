@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
+import time
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
 import requests
 import ruamel.yaml
@@ -62,6 +66,8 @@ def download_file(url: str, file: str | Path):
     https://stackoverflow.com/a/42071418/7346633
     """
     file = Path(file)
+    if file.is_file():
+        return file
 
     chunk_size = 1024
     r = requests.get(url, stream=True)
@@ -75,17 +81,62 @@ def download_file(url: str, file: str | Path):
     return file
 
 
-def download_updates(updates: list[tuple[Kext, Release]]):
+def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
     # Create temporary directory
     with TemporaryDirectory() as tmp:
+        start = time.time_ns()
+
         tmp = Path(tmp)
+        kexts = tmp / 'extract'
+        kexts.mkdir(parents=True, exist_ok=True)
+        backup = efi.parent / f'Backups/{datetime.now().strftime("%m-%d %H-%M")}'
+        backup.mkdir(parents=True, exist_ok=True)
 
         print('Downloading zip files...')
-        files = [download_file(r.artifact.url, tmp / r.artifact.name) for k, r in updates]
+        files = [(k, r, download_file(r.artifact.url, tmp / r.artifact.name)) for k, r in updates]
 
         print()
-        print('Extracting kexts')
+        print('Extracting kexts...')
 
+        def extract(k: Kext, f: Path):
+            if f.suffix != '.zip':
+                print(f'Unable to process {f.name}. Currently only zip files are supported.')
+                return None
+
+            with ZipFile(f, 'r') as zipf:
+                lower = k.name.lower() + '.kext/'
+
+                def find_name():
+                    for n in zipf.namelist():
+                        if n.lower().endswith(lower):
+                            return n
+
+                    return None
+
+                name = find_name()
+                if not find_name():
+                    print(f'Unable to find {k.name}.kext in {f.name}, skipping.')
+                    return None
+
+                for to_extract in zipf.namelist():
+                    if to_extract.startswith(name):
+                        zipf.extract(to_extract, kexts)
+
+                return kexts / name
+
+        extracted = [(k, r, extract(k, f)) for k, r, f in files]
+        extracted = [e for e in extracted if e[2]]
+
+        print(f'Backing up original kexts to {backup}...')
+        for k, r, e in extracted:
+            shutil.move(k.path, backup / k.name)
+
+        print(f'Installing new kexts...')
+        for k, r, e in extracted:
+            shutil.move(e, k.path)
+
+        print()
+        print(f'✨ All Done in {(time.time_ns() - start) / 1e6:,.0f}s!')
 
 
 def run():
@@ -144,7 +195,7 @@ def run():
         exit(0)
 
     print()
-    download_updates(updates)
+    download_updates(efi, updates)
 
 
 if __name__ == '__main__':
