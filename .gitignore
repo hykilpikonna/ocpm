@@ -116,3 +116,4 @@ dmypy.json
 # Custom
 .idea
 *.iml
+.DS_Store
