@@ -176,7 +176,8 @@ def run():
     def get_latest(k: Kext):
         try:
             return get_latest_release(k, repos, args.pre)
-        except AssertionError:
+        except AssertionError as e:
+            print(e)
             return None
 
     latests = thread_map(get_latest, kexts, desc='Fetching Updates'.ljust(bar_len), max_workers=32, bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
