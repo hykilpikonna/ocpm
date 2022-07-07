@@ -9,6 +9,20 @@ Repos:
   NVMeFix: https://github.com/acidanthera/NVMeFix
   WhateverGreen: https://github.com/acidanthera/WhateverGreen
   RealtekRTL8111: https://github.com/Mieze/RTL8111_driver_for_OS_X
-  AirportItlwm: https://github.com/OpenIntelWireless/itlwm
+  AirportItlwm-Monterey:
+    Repo: &itlwm https://github.com/OpenIntelWireless/itlwm
+    Artifact: .*Monterey.*
+  AirportItlwm-BigSur:
+    Repo: *itlwm
+    Artifact: .*BigSur.*
+  AirportItlwm-Catalina:
+    Repo: *itlwm
+    Artifact: .*Catalina.*
+  AirportItlwm-Mojave:
+    Repo: *itlwm
+    Artifact: .*Mojave.*
+  AirportItlwm-HighSierra:
+    Repo: *itlwm
+    Artifact: .*HighSierra.*
   CpuTscSync: https://github.com/acidanthera/CpuTscSync
 
