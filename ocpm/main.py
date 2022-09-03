@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import plistlib
 import shutil
 import time
 from datetime import datetime
@@ -187,7 +188,11 @@ def install(args, repos: dict, kexts: list[Kext], efi: Path):
 
     # Compare versions
     updates: list[tuple[Kext, Release]]
-    updates = [(Kext(efi / 'OC' / 'Kexts' / n, n, version=l.tag), l) for n, l in zip(names, latests) if l]
+    updates = [(Kext(efi / 'OC' / 'Kexts' / (n + '.kext'), n, version=l.tag), l) for n, l in zip(names, latests) if l]
+
+    if not updates:
+        printc('&cNo kexts found. Exiting')
+        return
 
     # Download prompt
     print()
@@ -201,12 +206,57 @@ def install(args, repos: dict, kexts: list[Kext], efi: Path):
 
     print()
     download_updates(efi, updates)
+    enable(names, kexts, efi)
+
+
+def enable(names: list[str], kexts: list[Kext], efi: Path):
+    config_plist: dict = plistlib.loads((efi / 'OC' / 'Config.plist').read_bytes())
+    config_kexts: list[dict] = config_plist['Kernel']['Add']
+
+    def conf_kext_index() -> dict[str, dict]:
+        return {k['BundlePath'].split('.kext')[0]: k for k in config_kexts}
+
+    # Find relevant kexts
+    index: dict[str: Kext] = {k.path.name.lower().split('.kext')[0]: k for k in kexts}
+    kexts: list[Kext] = [index.get(n.lower()) for n in names]
+    for n, orig in zip(kexts, names):
+        assert n, f'{orig} is not found'
+
+    # Modify config.plist
+    for k in kexts:
+        # Kext config entry doesn't exist, create one
+        if k.name not in conf_kext_index():
+            exec_path = f'Contents/MacOS/{k.name}'
+            exec_path = exec_path if (k.path / exec_path).is_file() else ''
+            if not exec_path and (k.path / 'Contents/MacOS').is_dir():
+                execs = os.listdir(k.path / 'Contents/MacOS')
+                if execs:
+                    exec_path = f'Contents/MacOS/{execs[0]}'
+
+            config_kexts.append({
+                'Arch': 'x86_64',
+                'BundlePath': k.path.name,
+                'Comment': '',
+                'Enabled': True,
+                'ExecutablePath': str(exec_path),
+                'MaxKernel': '',
+                'MinKernel': '',
+                'PlistPath': 'Contents/Info.plist'
+            })
+        else:
+            conf_kext_index()[k.name]['Enabled'] = True
+
+    # Save config.plist
+    (efi / 'OC' / 'Config.plist').write_bytes(plistlib.dumps(config_plist))
+    print('Enabled!')
 
 
 def run():
     parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
     parser.add_argument('-U', '--update', action='store_true', help='Update')
     parser.add_argument('-S', '--install', nargs='+', help='Install packages')
+    parser.add_argument('-E', '--enable', nargs='+', help='Enable packages in Kexts directory')
+    # parser.add_argument('-D', '--disable', nargs='+', help='Disable packages')
     parser.add_argument('--efi', help='EFI Directory Path', default='.')
     parser.add_argument('--pre', action='store_true', help='Use pre-release')
     parser.add_argument('-y', action='store_true', help='Say yes')
@@ -237,6 +287,9 @@ def run():
 
     if args.install:
         return install(args, repos, kexts, efi)
+
+    if args.enable:
+        return enable(args.enable, kexts, efi)
 
 
 if __name__ == '__main__':
