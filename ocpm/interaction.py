@@ -33,11 +33,10 @@ def ver_color(src: str, to: str):
     :param to: Updated version
     :return: Compared version
     """
-    tsp = to.split('.')
-
     try:
         i = ver_diff(src, to)
-        return '.'.join(tsp[:i]) + '.&a' + '.'.join(tsp[i:]) + '&r'
+        print(i, tsp, tsp[:i], tsp[i:])
+        return ('.'.join(tsp[:i]) + '.&a' + '.'.join(tsp[i:]) + '&r').strip('.')
     except Exception:
         return f'&a{to}&r'
 
