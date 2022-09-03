@@ -1,11 +1,16 @@
 Repos:
   Lilu: https://github.com/acidanthera/Lilu
   AppleALC: https://github.com/acidanthera/AppleALC
-  IntelBluetoothFirmware: https://github.com/OpenIntelWireless/IntelBluetoothFirmware
+  IntelBluetoothFirmware: &itlbf https://github.com/OpenIntelWireless/IntelBluetoothFirmware
+  IntelBluetoothInjector: *itlbf
+  IntelBTPatcher: *itlbf
   BlueToolFixup: https://github.com/acidanthera/BrcmPatchRAM
   VirtualSMC: &smc https://github.com/acidanthera/VirtualSMC
   SMCSuperIO: *smc
   SMCProcessor: *smc
+  SMCBatteryManager: *smc
+  SMCLightSensor: *smc
+  SMCDellSensors: *smc
   NVMeFix: https://github.com/acidanthera/NVMeFix
   WhateverGreen: https://github.com/acidanthera/WhateverGreen
   RealtekRTL8111: https://github.com/Mieze/RTL8111_driver_for_OS_X
@@ -25,4 +30,13 @@ Repos:
     Repo: *itlwm
     Artifact: .*HighSierra.*
   CpuTscSync: https://github.com/acidanthera/CpuTscSync
+  VoodooInput: https://github.com/acidanthera/VoodooInput
+  VoodooI2C: &i2c https://github.com/VoodooI2C/VoodooI2C
+  VoodooI2CAtmelMXT: *i2c
+  VoodooI2CELANL: *i2c
+  VoodooI2CFTE: *i2c
+  VoodooI2CHID: *i2c
+  VoodooI2CSynaptics: *i2c
+  VoodooPS2Controller: https://github.com/acidanthera/VoodooPS2
+
 
