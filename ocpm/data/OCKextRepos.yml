@@ -4,7 +4,6 @@ Repos:
   IntelBluetoothFirmware: &itlbf https://github.com/OpenIntelWireless/IntelBluetoothFirmware
   IntelBluetoothInjector: *itlbf
   IntelBTPatcher: *itlbf
-  BlueToolFixup: https://github.com/acidanthera/BrcmPatchRAM
   VirtualSMC: &smc https://github.com/acidanthera/VirtualSMC
   SMCSuperIO: *smc
   SMCProcessor: *smc
@@ -38,5 +37,15 @@ Repos:
   VoodooI2CHID: *i2c
   VoodooI2CSynaptics: *i2c
   VoodooPS2Controller: https://github.com/acidanthera/VoodooPS2
-
-
+  USBToolBox: &utb https://github.com/USBToolBox/kext
+  UTBDefault: *utb
+  BrcmFirmwareRepo: &brcm https://github.com/acidanthera/BrcmPatchRAM
+  BrcmNonPatchRAM: *brcm
+  BrcmNonPatchRAM2: *brcm
+  BrcmFirmwareData: *brcm
+  BrcmPatchRAM3: *brcm
+  BrcmPatchRAM2: *brcm
+  BrcmPatchRAM: *brcm
+  BlueToolFixup: *brcm
+  BrcmBluetoothInjector: *brcm
+  BrcmBluetoothInjectorLegacy: *brcm
