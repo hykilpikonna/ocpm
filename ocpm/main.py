@@ -206,7 +206,7 @@ def install(args, repos: dict, kexts: list[Kext], efi: Path):
 
     print()
     download_updates(efi, updates)
-    enable(names, kexts, efi)
+    enable(names, find_kexts(efi), efi)
 
 
 def enable(names: list[str], kexts: list[Kext], efi: Path):
@@ -251,6 +251,14 @@ def enable(names: list[str], kexts: list[Kext], efi: Path):
     print('Enabled!')
 
 
+def find_kexts(efi: Path) -> list[Kext]:
+    kexts_dir = efi / 'OC' / 'Kexts'
+    kexts = [str(f) for f in os.listdir(kexts_dir)]
+    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext')]
+    kexts = [Kext.from_path(k) for k in kexts]
+    return kexts
+
+
 def run():
     parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
     parser.add_argument('-U', '--update', action='store_true', help='Update')
@@ -271,12 +279,8 @@ def run():
     assert (efi / 'OC').is_dir(), 'Open Core directory (OC) not found.'
 
     # Find kexts
-    kexts_dir = efi / 'OC' / 'Kexts'
-    kexts = [str(f) for f in os.listdir(kexts_dir)]
-    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext')]
-
-    kexts = [Kext.from_path(k) for k in kexts]
-    print(f'🔍 Found {len(kexts)} kexts in {kexts_dir}')
+    kexts = find_kexts(efi)
+    print(f'🔍 Found {len(kexts)} kexts in {efi}')
 
     # Read Repo
     with open(Path(__file__).parent / 'data' / 'OCKextRepos.yml') as f:
