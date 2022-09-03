@@ -12,12 +12,15 @@ pip install ocpm
 
 ## Usage
 
-First, cd to your EFI directory, and then run `ocpm update` to update all kexts.
+First, cd to your EFI directory, and then run `ocpm -U` to update all kexts.
+
+Use `ocpm -I [kext names...]` to install kexts
 
 ## Features / To-do
 
 * [x] Update kexts to the latest version
-* [ ] Install/uninstall kexts
+* [x] Install kexts
+* [ ] Uninstall kexts
 * [ ] Resolve dependencies
 * [ ] Install specific versions of a kext
 * [ ] Install OS-dependent kexts (like AirportItlwm)

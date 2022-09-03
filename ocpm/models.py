@@ -11,14 +11,13 @@ class Kext:
     path: Path
 
     name: str
-    id: str
     version: str
-    sdk_os: str
-    min_os: str
+    id: str | None = None
+    sdk_os: str | None = None
+    min_os: str | None = None
 
-    def __init__(self, path: Path):
-        self.path = path
-
+    @classmethod
+    def from_path(cls, path: Path) -> 'Kext':
         # Find plist file
         plist = path / 'Contents' / 'Info.plist'
         if not plist.is_file():
@@ -27,14 +26,16 @@ class Kext:
         # Load plist file
         plist = plistlib.loads(plist.read_bytes())
 
-        self.name = plist['CFBundleName']
-        self.id = plist['CFBundleIdentifier']
-        self.version = plist['CFBundleVersion']
-        self.sdk_os = plist.get('DTSDKName')
-        self.min_os = plist.get('LSMinimumSystemVersion')
+        name = plist['CFBundleName']
+        id = plist['CFBundleIdentifier']
+        version = plist['CFBundleVersion']
+        sdk_os = plist.get('DTSDKName')
+        min_os = plist.get('LSMinimumSystemVersion')
 
-        if self.sdk_os:
-            self.sdk_os = self.sdk_os.replace('macosx', '')
+        if sdk_os:
+            sdk_os = sdk_os.replace('macosx', '')
+
+        return cls(path, name, id, version, sdk_os, min_os)
 
 
 @dataclass()

@@ -13,7 +13,7 @@ from zipfile import ZipFile
 import requests
 import ruamel.yaml
 import tqdm as tqdm
-from hypy_utils import printc
+from hypy_utils import printc, ensure_dir
 from packaging import version
 from tqdm.contrib.concurrent import thread_map
 
@@ -28,13 +28,13 @@ except Exception:
     bar_len = 20
 
 
-def get_latest_release(kext: Kext, repos: dict, pre: bool):
+def get_latest_release(name: str, repos: dict, pre: bool):
     # Lowercase keys
     repos = {k.lower(): v for k, v in repos['Repos'].items()}
-    name = kext.name.lower()
+    name = name.lower()
 
     # Find repo
-    assert name in repos, f'Kext {kext.name} is not found in our repos. (If it\'s open source, feel free to add it in!)'
+    assert name in repos, f'Kext {name} is not found in our repos. (If it\'s open source, feel free to add it in!)'
     repo_info = repos[name]
 
     if isinstance(repo_info, str):
@@ -43,7 +43,7 @@ def get_latest_release(kext: Kext, repos: dict, pre: bool):
         repo = repo_info['Repo']
         artifact = repo_info.get('Artifact')
 
-    assert 'github.com/' in repo, f'For {kext.name}: {repo} is not a github repo, skipping...'
+    assert 'github.com/' in repo, f'For {name}: {repo} is not a github repo, skipping...'
     repo = repo.split('github.com/')[1]
 
     # Check latest version
@@ -81,16 +81,40 @@ def download_file(url: str, file: str | Path):
     return file
 
 
+def extract_kext(kext_name: str, zip_file: Path, tmp_dir: Path) -> Path | None:
+    if zip_file.suffix != '.zip':
+        print(f'Unable to process {zip_file.name}. Currently only zip files are supported.')
+        return None
+
+    with ZipFile(zip_file, 'r') as zipf:
+        lower = kext_name.lower() + '.kext/'
+
+        def find_name():
+            for n in zipf.namelist():
+                if n.lower().endswith(lower):
+                    return n
+
+            return None
+
+        name = find_name()
+        if not name:
+            print(f'Unable to find {kext_name}.kext in {zip_file.name}, skipping.')
+            return None
+
+        for to_extract in zipf.namelist():
+            if to_extract.startswith(name):
+                zipf.extract(to_extract, tmp_dir)
+
+        return tmp_dir / name
+
+
 def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
     # Create temporary directory
     with TemporaryDirectory() as tmp:
         start = time.time_ns()
 
         tmp = Path(tmp)
-        kexts = tmp / 'extract'
-        kexts.mkdir(parents=True, exist_ok=True)
-        backup = efi.parent / f'Backups/{datetime.now().strftime("%m-%d %H-%M")}'
-        backup.mkdir(parents=True, exist_ok=True)
+        kexts = ensure_dir(tmp / 'extract')
 
         print('Downloading zip files...')
         files = [(k, r, download_file(r.artifact.url, tmp / r.artifact.name)) for k, r in updates]
@@ -98,38 +122,16 @@ def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
         print()
         print('Extracting kexts...')
 
-        def extract(k: Kext, f: Path):
-            if f.suffix != '.zip':
-                print(f'Unable to process {f.name}. Currently only zip files are supported.')
-                return None
-
-            with ZipFile(f, 'r') as zipf:
-                lower = k.name.lower() + '.kext/'
-
-                def find_name():
-                    for n in zipf.namelist():
-                        if n.lower().endswith(lower):
-                            return n
-
-                    return None
-
-                name = find_name()
-                if not find_name():
-                    print(f'Unable to find {k.name}.kext in {f.name}, skipping.')
-                    return None
-
-                for to_extract in zipf.namelist():
-                    if to_extract.startswith(name):
-                        zipf.extract(to_extract, kexts)
-
-                return kexts / name
-
-        extracted = [(k, r, extract(k, f)) for k, r, f in files]
+        extracted = [(k, r, extract_kext(k.name, f, kexts)) for k, r, f in files]
         extracted = [e for e in extracted if e[2]]
 
-        print(f'Backing up original kexts to {backup}...')
-        for k, r, e in extracted:
-            shutil.move(k.path, backup / k.name)
+        # Backup if needed
+        existing = [t for t in extracted if t[0].path.is_dir()]
+        if len(existing) > 0:
+            backup = ensure_dir(efi.parent / f'Backups/{datetime.now().strftime("%m-%d %H-%M")}')
+            print(f'Backing up original kexts to {backup}...')
+            for k, r, e in existing:
+                shutil.move(k.path, backup / k.name)
 
         print(f'Installing new kexts...')
         for k, r, e in extracted:
@@ -139,48 +141,19 @@ def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
         print(f'✨ All Done in {(time.time_ns() - start) / 1e6:,.0f}s!')
 
 
-def run():
-    parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
-    parser.add_argument('cmd', help='Command (update)')
-    parser.add_argument('--efi', help='EFI Directory Path', default='.')
-    parser.add_argument('--pre', action='store_true', help='Use pre-release')
-    parser.add_argument('-y', action='store_true', help='Say yes')
-
-    printc('\n&fOpenCore Package Manager v1.0.0 by HyDEV\n')
-    args = parser.parse_args()
-
-    if args.cmd.lower() != 'update':
-        print(f'Unknown Command: {args.cmd}')
-        return
-
-    # Normalize EFI Path
-    efi = Path(args.efi)
-    if (efi / 'EFI').is_dir():
-        efi = efi / 'EFI'
-    assert (efi / 'OC').is_dir(), 'Open Core directory (OC) not found.'
-
-    # Find kexts
-    kexts_dir = efi / 'OC' / 'Kexts'
-    kexts = [str(f) for f in os.listdir(kexts_dir)]
-    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext')]
-
-    kexts = [Kext(k) for k in kexts]
-    print(f'🔍 Found {len(kexts)} kexts in {kexts_dir}')
-    # print_kexts(kexts)
-
-    # Read Repo
-    with open(Path(__file__).parent / 'data' / 'OCKextRepos.yml') as f:
-        repos = ruamel.yaml.safe_load(f)
-
-    # Get latest repos with multithreading
-    def get_latest(k: Kext):
+def get_latest_list(names: list[str], repos: dict, args) -> list[Release]:
+    def get_latest(s: str):
         try:
-            return get_latest_release(k, repos, args.pre)
+            return get_latest_release(s, repos, args.pre)
         except AssertionError as e:
             print(e)
             return None
 
-    latests = thread_map(get_latest, kexts, desc='Fetching Updates'.ljust(bar_len), max_workers=32, bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
+    return thread_map(get_latest, names, desc='Fetching Kexts'.ljust(bar_len), max_workers=32, bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
+
+
+def update(args, repos: dict, kexts: list[Kext], efi: Path):
+    latests = get_latest_list([k.name for k in kexts], repos, args)
 
     # Compare versions
     updates: list[tuple[Kext, Release]]
@@ -206,6 +179,64 @@ def run():
 
     print()
     download_updates(efi, updates)
+
+
+def install(args, repos: dict, kexts: list[Kext], efi: Path):
+    names = args.install
+    latests = get_latest_list(names, repos, args)
+
+    # Compare versions
+    updates: list[tuple[Kext, Release]]
+    updates = [(Kext(efi / 'OC' / 'Kexts' / n, n, version=l.tag), l) for n, l in zip(names, latests) if l]
+
+    # Download prompt
+    print()
+    print(f'Total download size: {sizeof_fmt(sum(l.artifact.size for k, l in updates))}')
+    proceed = 'y' if args.y else input(f'🚀 Ready to fly? [y/N] ')
+
+    if proceed.lower().strip() != 'y':
+        print()
+        print('😕 Huh, okay')
+        exit(0)
+
+    print()
+    download_updates(efi, updates)
+
+
+def run():
+    parser = argparse.ArgumentParser(description='OpenCore Package Manager by HyDEV')
+    parser.add_argument('-U', '--update', action='store_true', help='Update')
+    parser.add_argument('-S', '--install', nargs='+', help='Install packages')
+    parser.add_argument('--efi', help='EFI Directory Path', default='.')
+    parser.add_argument('--pre', action='store_true', help='Use pre-release')
+    parser.add_argument('-y', action='store_true', help='Say yes')
+
+    printc('\n&fOpenCore Package Manager v1.0.0 by HyDEV\n')
+    args = parser.parse_args()
+
+    # Normalize EFI Path
+    efi = Path(args.efi)
+    if (efi / 'EFI').is_dir():
+        efi = efi / 'EFI'
+    assert (efi / 'OC').is_dir(), 'Open Core directory (OC) not found.'
+
+    # Find kexts
+    kexts_dir = efi / 'OC' / 'Kexts'
+    kexts = [str(f) for f in os.listdir(kexts_dir)]
+    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext')]
+
+    kexts = [Kext.from_path(k) for k in kexts]
+    print(f'🔍 Found {len(kexts)} kexts in {kexts_dir}')
+
+    # Read Repo
+    with open(Path(__file__).parent / 'data' / 'OCKextRepos.yml') as f:
+        repos = ruamel.yaml.safe_load(f)
+
+    if args.update:
+        return update(args, repos, kexts, efi)
+
+    if args.install:
+        return install(args, repos, kexts, efi)
 
 
 if __name__ == '__main__':
