@@ -13,6 +13,8 @@ Repos:
   NVMeFix: https://github.com/acidanthera/NVMeFix
   WhateverGreen: https://github.com/acidanthera/WhateverGreen
   RealtekRTL8111: https://github.com/Mieze/RTL8111_driver_for_OS_X
+  RealtekCardReader: https://github.com/0xFireWolf/RealtekCardReader
+  RealtekCardReaderFriend: https://github.com/0xFireWolf/RealtekCardReaderFriend
   AirportItlwm-Monterey:
     Repo: &itlwm https://github.com/OpenIntelWireless/itlwm
     Artifact: .*Monterey.*
@@ -39,6 +41,7 @@ Repos:
   VoodooPS2Controller: https://github.com/acidanthera/VoodooPS2
   USBToolBox: &utb https://github.com/USBToolBox/kext
   UTBDefault: *utb
+  USBInjectAll: https://github.com/Sniki/OS-X-USB-Inject-All
   BrcmFirmwareRepo: &brcm https://github.com/acidanthera/BrcmPatchRAM
   BrcmNonPatchRAM: *brcm
   BrcmNonPatchRAM2: *brcm
@@ -49,3 +52,4 @@ Repos:
   BlueToolFixup: *brcm
   BrcmBluetoothInjector: *brcm
   BrcmBluetoothInjectorLegacy: *brcm
+  BrightnessKeys: https://github.com/acidanthera/BrightnessKeys
