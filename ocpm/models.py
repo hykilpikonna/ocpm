@@ -35,7 +35,7 @@ class Kext:
         if sdk_os:
             sdk_os = sdk_os.replace('macosx', '')
 
-        return cls(path, name, id, version, sdk_os, min_os)
+        return cls(path, name, version, id, sdk_os, min_os)
 
 
 @dataclass()
