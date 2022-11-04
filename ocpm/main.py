@@ -5,6 +5,7 @@ import argparse
 import os
 import plistlib
 import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -14,13 +15,26 @@ from zipfile import ZipFile
 import requests
 import ruamel.yaml
 import tqdm as tqdm
-from hypy_utils import printc, ensure_dir
+from hypy_utils import printc, ensure_dir, color
 from packaging import version
 from tqdm.contrib.concurrent import thread_map
 
 from .interaction import print_updates, sizeof_fmt
 from .models import Kext, Release
 
+
+# Github token
+TOKEN_PATH = Path.home() / '.config' / 'ocpm' / 'ght.txt'
+
+GHT = os.environ.get('GH_TOKEN')
+if TOKEN_PATH.is_file():
+    GHT = TOKEN_PATH.read_text('utf-8')
+
+HTTP = requests.Session()
+if GHT:
+    HTTP.headers['Authorization'] = f'token {GHT}'
+
+VERBOSE = False
 
 try:
     term_len = os.get_terminal_size().columns
@@ -40,9 +54,26 @@ def get_latest_release_repo(repo: str, pre: bool) -> Release:
 
     # Check latest version
     headers = {}
-    if 'GH_TOKEN' in os.environ:
-        headers['Authorization'] = f'token {os.environ["GH_TOKEN"]}'
-    releases = requests.get(f'https://api.github.com/repos/{repo}/releases', headers=headers).json()
+    releases = HTTP.get(f'https://api.github.com/repos/{repo}/releases', headers=headers)
+
+    assert releases.status_code != 404, f"{repo} returned 404 not found, maybe it moved to somewhere else?"
+
+    if releases.status_code >= 400:
+        err = sys.stderr
+        err.write(f"Error occurred while processing request: HTTP {releases.status_code}\n\n")
+        releases = releases.json()
+
+        if isinstance(releases, dict) and releases.get('message') is not None \
+                and 'rate limit' in releases.get('message').lower():
+            err.write(color('&cGitHub API rate limit exceeded. \n'
+                      'Github limits requests to 60 per hour if not logged in. \n'
+                      'Please follow the below guide to create an API token. \n'
+                      'https://github.com/hykilpikonna/ocpm/blob/master/rate-limit.md\n'))
+        err.flush()
+        os._exit(5)
+
+    releases = releases.json()
+
     if not pre:
         releases = [r for r in releases if not r['prerelease']]
     latest = releases[0]
@@ -162,15 +193,23 @@ def download_updates(efi: Path, updates: list[tuple[Kext, Release]]):
         print(f'✨ All Done in {(time.time_ns() - start) / 1e6:,.0f}s!')
 
 
-def get_latest_list(names: list[str], repos: dict, args) -> list[Release]:
+def get_latest_list(names: list[str], repos: dict, args) -> list[Release | None]:
     def get_latest(s: str):
         try:
             return get_latest_release(s, repos, args.pre)
         except AssertionError as e:
-            print(e)
-            return None
+            if VERBOSE:
+                print(e)
+            return s
 
-    return thread_map(get_latest, names, desc='Fetching Kexts'.ljust(bar_len), max_workers=32, bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
+    updates = thread_map(get_latest, names, desc='Fetching Kexts'.ljust(bar_len), max_workers=32,
+                       bar_format='{desc} {rate_fmt} {remaining} [{bar}] {percentage:.0f}%', ascii=' #', unit=' pkg')
+
+    skipped = [v for v in updates if isinstance(v, str)]
+    if skipped:
+        printc(f"&eSkipped {len(skipped)} unknown kexts: {', '.join(skipped)}")
+
+    return [v if not isinstance(v, str) else None for v in updates]
 
 
 def update(args, repos: dict, kexts: list[Kext], efi: Path):
@@ -181,7 +220,7 @@ def update(args, repos: dict, kexts: list[Kext], efi: Path):
     updates = [(k, l) for k, l in zip(kexts, latests) if l and version.parse(l.tag) > version.parse(k.version)]
 
     if len(updates) == 0:
-        print(f'✨ Everything up-to-date!')
+        printc(f'&a✨ Everything up-to-date!')
         exit(0)
 
     # Print updates
@@ -285,13 +324,30 @@ def run():
     parser.add_argument('-U', '--update', action='store_true', help='Update')
     parser.add_argument('-S', '--install', nargs='+', help='Install packages')
     parser.add_argument('-E', '--enable', nargs='+', help='Enable packages in Kexts directory')
-    # parser.add_argument('-D', '--disable', nargs='+', help='Disable packages')
+    parser.add_argument('-L', '--login', help='Log in to github with token to bypass rate limiting')
     parser.add_argument('--efi', help='EFI Directory Path', default='.')
     parser.add_argument('--pre', action='store_true', help='Use pre-release')
     parser.add_argument('-y', action='store_true', help='Say yes')
+    parser.add_argument('-v', action='store_true', help='Verbose logging')
 
     printc('\n&fOpenCore Package Manager v1.0.0 by HyDEV\n')
     args = parser.parse_args()
+
+    if args.v:
+        global VERBOSE
+        VERBOSE = True
+
+    if args.login:
+        token: str = args.login
+        TOKEN_PATH.parent.mkdir()
+        TOKEN_PATH.write_text(token, encoding='utf-8')
+        r = requests.get('https://api.github.com/user', headers={'Authorization': f'token {token}'})
+        if r.status_code >= 400:
+            printc(f"&cLogin failed: HTTP {r.status_code}\n{r.text}")
+            return
+        r = r.json()
+        printc(f'&aSuccessfully logged in as {r["login"]}')
+        return
 
     # Normalize EFI Path
     efi = Path(args.efi)
@@ -301,7 +357,7 @@ def run():
 
     # Find kexts
     kexts = find_kexts(efi)
-    print(f'🔍 Found {len(kexts)} kexts in {efi}')
+    print(f'🔍 Found {len(kexts)} kexts in {efi.absolute()}')
 
     # Read Repo
     with open(Path(__file__).parent / 'data' / 'OCKextRepos.yml') as f:
