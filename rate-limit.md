@@ -23,3 +23,5 @@ You can create an API token with your GitHub account to increase the rate limit 
 After generating a token, you can login to GitHub on OCPM by typing:
 
 `ocpm --login <your_token_here>`
+
+![image](https://user-images.githubusercontent.com/22280294/199897576-75b3fbf2-c9a8-4e31-82b5-d6add94e9e5b.png)
