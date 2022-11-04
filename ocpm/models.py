@@ -4,6 +4,7 @@ import plistlib
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 
 @dataclass()
@@ -17,11 +18,11 @@ class Kext:
     min_os: str | None = None
 
     @classmethod
-    def from_path(cls, path: Path) -> 'Kext':
+    def from_path(cls, path: Path) -> Optional['Kext']:
         # Find plist file
         plist = path / 'Contents' / 'Info.plist'
         if not plist.is_file():
-            print(f'Error loading {path.name}: Cannot find Info.plist')
+            return None
 
         # Load plist file
         plist = plistlib.loads(plist.read_bytes())

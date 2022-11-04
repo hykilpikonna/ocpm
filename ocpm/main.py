@@ -254,8 +254,9 @@ def enable(names: list[str], kexts: list[Kext], efi: Path):
 def find_kexts(efi: Path) -> list[Kext]:
     kexts_dir = efi / 'OC' / 'Kexts'
     kexts = [str(f) for f in os.listdir(kexts_dir)]
-    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext')]
+    kexts = [kexts_dir / f for f in kexts if f.lower().endswith('.kext') and not f.startswith("._")]
     kexts = [Kext.from_path(k) for k in kexts]
+    kexts = [k for k in kexts if k]
     return kexts
 
 
