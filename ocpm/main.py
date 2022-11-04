@@ -29,7 +29,36 @@ except Exception:
     bar_len = 20
 
 
-def get_latest_release(name: str, repos: dict, pre: bool):
+def get_latest_release_repo(repo: str, pre: bool) -> Release:
+    """
+    Fetch the latest release info from a repository
+
+    :param repo: GitHub repo in the format of owner/repo
+    :param pre: Whether to allow pre-releases
+    :return: Latest release
+    """
+
+    # Check latest version
+    headers = {}
+    if 'GH_TOKEN' in os.environ:
+        headers['Authorization'] = f'token {os.environ["GH_TOKEN"]}'
+    releases = requests.get(f'https://api.github.com/repos/{repo}/releases', headers=headers).json()
+    if not pre:
+        releases = [r for r in releases if not r['prerelease']]
+    latest = releases[0]
+
+    return Release.from_github(latest)
+
+
+def get_latest_release(name: str, repos: dict, pre: bool) -> Release:
+    """
+    Fetch the latest release info from a name in the repository list yml
+
+    :param name: Unique name
+    :param repos: Repository list yml (Check out data/OCKextRepos.yml)
+    :param pre: Whether to allow pre-releases
+    :return: Latest release
+    """
     # Lowercase keys
     repos = {k.lower(): v for k, v in repos['Repos'].items()}
     name = name.lower()
@@ -47,16 +76,7 @@ def get_latest_release(name: str, repos: dict, pre: bool):
     assert 'github.com/' in repo, f'For {name}: {repo} is not a github repo, skipping...'
     repo = repo.split('github.com/')[1]
 
-    # Check latest version
-    headers = {}
-    if 'GH_TOKEN' in os.environ:
-        headers['Authorization'] = f'token {os.environ["GH_TOKEN"]}'
-    releases = requests.get(f'https://api.github.com/repos/{repo}/releases', headers=headers).json()
-    if not pre:
-        releases = [r for r in releases if not r['prerelease']]
-    latest = releases[0]
-
-    return Release.from_github(latest)
+    return get_latest_release_repo(repo, pre)
 
 
 def download_file(url: str, file: str | Path):
