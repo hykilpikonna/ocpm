@@ -4,6 +4,8 @@ Repos:
   IntelBluetoothFirmware: &itlbf https://github.com/OpenIntelWireless/IntelBluetoothFirmware
   IntelBluetoothInjector: *itlbf
   IntelBTPatcher: *itlbf
+  IntelMausi: &imausi https://github.com/acidanthera/IntelMausi
+  IntelSnowMausi: *imausi
   VirtualSMC: &smc https://github.com/acidanthera/VirtualSMC
   SMCSuperIO: *smc
   SMCProcessor: *smc
@@ -53,3 +55,5 @@ Repos:
   BrcmBluetoothInjector: *brcm
   BrcmBluetoothInjectorLegacy: *brcm
   BrightnessKeys: https://github.com/acidanthera/BrightnessKeys
+  HibernationFixup: https://github.com/acidanthera/HibernationFixup
+
