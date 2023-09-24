@@ -41,6 +41,7 @@ Repos:
   IntelMausi: &imausi https://github.com/acidanthera/IntelMausi
   IntelSnowMausi: *imausi
   Lilu: https://github.com/acidanthera/Lilu
+  LucyRTL8125Ethernet: https://github.com/Mieze/LucyRTL8125Ethernet
   MacHyperVSupport: https://github.com/acidanthera/MacHyperVSupport
   MacHyperVSupportMonterey: https://github.com/acidanthera/MacHyperVSupport
   NVMeFix: https://github.com/acidanthera/NVMeFix
