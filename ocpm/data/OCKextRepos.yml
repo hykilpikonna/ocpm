@@ -45,6 +45,7 @@ Repos:
   MacHyperVSupport: https://github.com/acidanthera/MacHyperVSupport
   MacHyperVSupportMonterey: https://github.com/acidanthera/MacHyperVSupport
   NVMeFix: https://github.com/acidanthera/NVMeFix
+  RadeonSensor: https://github.com/ChefKissInc/RadeonSensor
   RealtekCardReader: https://github.com/0xFireWolf/RealtekCardReader
   RealtekCardReaderFriend: https://github.com/0xFireWolf/RealtekCardReaderFriend
   RealtekRTL8111: https://github.com/Mieze/RTL8111_driver_for_OS_X
@@ -54,6 +55,7 @@ Repos:
   SMCDellSensors: *smc
   SMCLightSensor: *smc
   SMCProcessor: *smc
+  SMCRadeonGPU: https://github.com/ChefKissInc/RadeonSensor
   SMCSuperIO: *smc
   UEFIGraphicsFB: https://github.com/acidanthera/UEFIGraphicsFB
   USBInjectAll: https://github.com/Sniki/OS-X-USB-Inject-All
