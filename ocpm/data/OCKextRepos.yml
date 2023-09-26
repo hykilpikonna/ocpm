@@ -61,6 +61,7 @@ Repos:
   USBInjectAll: https://github.com/Sniki/OS-X-USB-Inject-All
   USBToolBox: &utb https://github.com/USBToolBox/kext
   UTBDefault: *utb
+  USBWakeFixup: https://github.com/osy/USBWakeFixup
   VirtualSMC: *smc
   VoodooI2C: &i2c https://github.com/VoodooI2C/VoodooI2C
   VoodooI2CAtmelMXT: *i2c
