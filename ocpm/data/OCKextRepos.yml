@@ -56,7 +56,7 @@ Repos:
   SMCLightSensor: *smc
   SMCProcessor: *smc
   SMCRadeonGPU: https://github.com/ChefKissInc/RadeonSensor
-  SMCRadeonSensor: https://github.com/ChefKissInc/RadeonSensor
+  SMCRadeonSensors: https://github.com/ChefKissInc/RadeonSensor
   SMCSuperIO: *smc
   UEFIGraphicsFB: https://github.com/acidanthera/UEFIGraphicsFB
   USBInjectAll: https://github.com/Sniki/OS-X-USB-Inject-All
